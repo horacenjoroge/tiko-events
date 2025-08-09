@@ -1,45 +1,273 @@
-/* src/app/globals.css - Fixed version */
+/* src/app/globals.css - TiKo Design System */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  /* TiKo Brand Colors */
+  --color-primary: #8b5cf6;
+  --color-primary-dark: #7c3aed;
+  --color-primary-light: #a78bfa;
+  
+  --color-secondary: #f97316;
+  --color-secondary-dark: #ea580c;
+  --color-secondary-light: #fb923c;
+  
+  --color-accent: #10b981;
+  --color-accent-dark: #059669;
+  --color-accent-light: #34d399;
+  
+  /* Neutral colors */
+  --color-gray-50: #f9fafb;
+  --color-gray-100: #f3f4f6;
+  --color-gray-200: #e5e7eb;
+  --color-gray-300: #d1d5db;
+  --color-gray-400: #9ca3af;
+  --color-gray-500: #6b7280;
+  --color-gray-600: #4b5563;
+  --color-gray-700: #374151;
+  --color-gray-800: #1f2937;
+  --color-gray-900: #111827;
+  
+  /* Status colors */
+  --color-success: #10b981;
+  --color-warning: #f59e0b;
+  --color-error: #ef4444;
+  --color-info: #3b82f6;
+}
+
 @layer base {
-  body {
-    font-feature-settings: "rlig" 1, "calt" 1;
-    font-family: Inter, system-ui, sans-serif;
+  * {
+    @apply border-gray-200;
   }
   
   html {
     scroll-behavior: smooth;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
+  
+  body {
+    @apply bg-white text-gray-900 font-sans;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+  
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-semibold leading-tight;
+  }
+  
+  h1 { @apply text-4xl md:text-5xl; }
+  h2 { @apply text-3xl md:text-4xl; }
+  h3 { @apply text-2xl md:text-3xl; }
+  h4 { @apply text-xl md:text-2xl; }
+  h5 { @apply text-lg md:text-xl; }
+  h6 { @apply text-base md:text-lg; }
 }
 
 @layer components {
+  /* Button Components */
+  .btn {
+    @apply inline-flex items-center justify-center px-4 py-2 rounded-lg font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+  
+  .btn-primary {
+    @apply btn bg-purple-600 text-white hover:bg-purple-700 focus:ring-purple-500 shadow-sm hover:shadow-md;
+  }
+  
+  .btn-secondary {
+    @apply btn bg-orange-500 text-white hover:bg-orange-600 focus:ring-orange-500 shadow-sm hover:shadow-md;
+  }
+  
+  .btn-outline {
+    @apply btn border-2 border-purple-600 text-purple-600 hover:bg-purple-50 focus:ring-purple-500;
+  }
+  
+  .btn-ghost {
+    @apply btn text-gray-600 hover:text-gray-900 hover:bg-gray-50 focus:ring-gray-500;
+  }
+  
+  .btn-sm {
+    @apply px-3 py-1.5 text-sm;
+  }
+  
+  .btn-lg {
+    @apply px-6 py-3 text-lg;
+  }
+  
+  /* Card Components */
+  .card {
+    @apply bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-shadow duration-200;
+  }
+  
+  .card-hover {
+    @apply card hover:border-purple-200 hover:shadow-lg transform hover:scale-[1.02] transition-all duration-200;
+  }
+  
+  /* Event Card */
+  .event-card {
+    @apply card-hover overflow-hidden;
+  }
+  
+  .event-card-image {
+    @apply w-full h-48 object-cover;
+  }
+  
+  .event-card-content {
+    @apply p-6;
+  }
+  
+  .event-card-title {
+    @apply text-xl font-semibold text-gray-900 mb-2 line-clamp-2;
+  }
+  
+  .event-card-subtitle {
+    @apply text-sm text-gray-500 mb-3;
+  }
+  
+  .event-card-description {
+    @apply text-gray-600 text-sm line-clamp-3 mb-4;
+  }
+  
+  .event-card-footer {
+    @apply flex items-center justify-between;
+  }
+  
+  /* Ticket Card */
+  .ticket-card {
+    @apply card p-4 border-l-4 border-l-purple-500;
+  }
+  
+  .ticket-card-active {
+    @apply ticket-card bg-purple-50 border-l-purple-600;
+  }
+  
+  /* Form Components */
+  .form-input {
+    @apply w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-colors;
+  }
+  
+  .form-label {
+    @apply block text-sm font-medium text-gray-700 mb-1;
+  }
+  
+  .form-error {
+    @apply text-sm text-red-600 mt-1;
+  }
+  
+  .form-group {
+    @apply mb-4;
+  }
+  
+  /* Navigation Components */
+  .nav-link {
+    @apply text-gray-600 hover:text-purple-600 font-medium transition-colors duration-200;
+  }
+  
+  .nav-link-active {
+    @apply nav-link text-purple-600;
+  }
+  
+  /* Badge Components */
+  .badge {
+    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium;
+  }
+  
+  .badge-primary {
+    @apply badge bg-purple-100 text-purple-800;
+  }
+  
+  .badge-secondary {
+    @apply badge bg-orange-100 text-orange-800;
+  }
+  
+  .badge-success {
+    @apply badge bg-green-100 text-green-800;
+  }
+  
+  .badge-warning {
+    @apply badge bg-yellow-100 text-yellow-800;
+  }
+  
+  .badge-error {
+    @apply badge bg-red-100 text-red-800;
+  }
+  
+  /* Status Indicators */
+  .status-dot {
+    @apply w-2 h-2 rounded-full inline-block;
+  }
+  
+  .status-online {
+    @apply status-dot bg-green-500;
+  }
+  
+  .status-offline {
+    @apply status-dot bg-gray-400;
+  }
+  
+  .status-busy {
+    @apply status-dot bg-orange-500;
+  }
+  
+  /* Loading States */
+  .skeleton {
+    @apply animate-pulse bg-gray-200 rounded;
+  }
+  
+  .skeleton-text {
+    @apply skeleton h-4 w-full mb-2;
+  }
+  
+  .skeleton-title {
+    @apply skeleton h-6 w-3/4 mb-4;
+  }
+  
+  .skeleton-image {
+    @apply skeleton h-48 w-full;
+  }
+  
+  /* Utility Classes */
+  .line-clamp-1 {
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 1;
+  }
+  
+  .line-clamp-2 {
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+  }
+  
+  .line-clamp-3 {
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+  }
+  
+  /* Container */
   .container {
     @apply mx-auto max-w-7xl px-4 sm:px-6 lg:px-8;
   }
   
-  .btn-primary {
-    @apply bg-primary-500 text-white hover:bg-primary-600 focus:ring-primary-500/50 px-4 py-2 rounded-md font-medium transition-colors;
+  /* Kenya-specific styling */
+  .kenya-flag-colors {
+    background: linear-gradient(to right, #000000 33%, #cc0000 33% 66%, #006633 66%);
   }
   
-  .btn-secondary {
-    @apply bg-secondary-500 text-white hover:bg-secondary-600 focus:ring-secondary-500/50 px-4 py-2 rounded-md font-medium transition-colors;
+  .mpesa-green {
+    @apply bg-green-600 text-white;
   }
   
-  .card-gradient {
-    @apply bg-gradient-to-br from-primary-50 via-accent-50 to-secondary-50;
+  .pesapal-blue {
+    @apply bg-blue-600 text-white;
   }
   
-  .text-gradient {
-    @apply bg-gradient-to-r from-primary-500 via-accent-500 to-secondary-500 bg-clip-text text-transparent;
-  }
-  
-  .event-card {
-    @apply bg-white rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition-shadow;
-  }
-  
-  .ticket-card {
-    @apply bg-white rounded-lg border border-gray-200 p-4 hover:border-primary-300 transition-colors;
+  .airtel-red {
+    @apply bg-red-600 text-white;
   }
 }
