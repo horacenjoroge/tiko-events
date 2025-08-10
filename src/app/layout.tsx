@@ -1,11 +1,10 @@
-// src/app/layout.tsx - Updated with PWA Integration
+// src/app/layout.tsx - Fixed SSR Issue
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { PWAProvider } from '@/components/PWAProvider';
 import { AuthProvider } from '@/contexts/AuthContext';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
+import { QueryProvider } from '@/components/QueryProvider'; // ✅ Changed: Use client-side provider
 import { PWAInstallBanner } from '@/components/PWAInstallBanner';
 import { PWAUpdateNotification } from '@/components/PWAUpdateNotification';
 import { PWAStatus } from '@/components/PWAStatus';
@@ -51,33 +50,7 @@ export const metadata: Metadata = {
   },
 };
 
-// Create a client
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      staleTime: 1000 * 60 * 5, // 5 minutes
-      cacheTime: 1000 * 60 * 30, // 30 minutes
-      retry: (failureCount, error: any) => {
-        // Don't retry on 4xx errors except 408, 429
-        if (error?.status >= 400 && error?.status < 500 && ![408, 429].includes(error?.status)) {
-          return false;
-        }
-        return failureCount < 3;
-      },
-      refetchOnWindowFocus: false,
-      refetchOnReconnect: 'always',
-    },
-    mutations: {
-      retry: (failureCount, error: any) => {
-        // Don't retry client errors
-        if (error?.status >= 400 && error?.status < 500) {
-          return false;
-        }
-        return failureCount < 2;
-      },
-    },
-  },
-});
+// ✅ Removed: QueryClient creation moved to client-side component
 
 export default function RootLayout({
   children,
@@ -121,7 +94,7 @@ export default function RootLayout({
       </head>
       
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
-        <QueryClientProvider client={queryClient}>
+        <QueryProvider>
           <AuthProvider>
             <PWAProvider>
               {/* Main App Content */}
@@ -136,12 +109,9 @@ export default function RootLayout({
               
               {/* PWA Status - Only show in development or for debugging */}
               {process.env.NODE_ENV === 'development' && <PWAStatus />}
-              
-              {/* React Query DevTools - Development only */}
-              {process.env.NODE_ENV === 'development' && <ReactQueryDevtools />}
             </PWAProvider>
           </AuthProvider>
-        </QueryClientProvider>
+        </QueryProvider>
         
         {/* Loading script for immediate PWA initialization */}
         <script
