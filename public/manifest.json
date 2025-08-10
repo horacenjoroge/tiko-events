@@ -1,24 +1,112 @@
+
 {
-    "name": "TiKo - Event Tickets Kenya",
-    "short_name": "TiKo",
-    "description": "Discover and book amazing events across Kenya",
-    "start_url": "/",
-    "display": "standalone",
-    "background_color": "#ffffff",
-    "theme_color": "#8B5CF6",
-    "orientation": "portrait-primary",
-    "icons": [
-      {
-        "src": "/icon-192x192.png",
-        "sizes": "192x192",
-        "type": "image/png",
-        "purpose": "any maskable"
-      },
-      {
-        "src": "/icon-512x512.png",
-        "sizes": "512x512", 
-        "type": "image/png",
-        "purpose": "any maskable"
-      }
-    ]
-  }
+  "name": "TiKo - Event Ticketing for Kenya",
+  "short_name": "TiKo",
+  "description": "Discover and book amazing events across Kenya - from concerts to hiking adventures",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#8b5cf6",
+  "orientation": "portrait-primary",
+  "scope": "/",
+  "lang": "en-KE",
+  "categories": ["entertainment", "lifestyle", "travel", "business"],
+  "icons": [
+    {
+      "src": "/icons/icon-72x72.png",
+      "sizes": "72x72",
+      "type": "image/png",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "/icons/icon-96x96.png", 
+      "sizes": "96x96",
+      "type": "image/png",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "/icons/icon-128x128.png",
+      "sizes": "128x128", 
+      "type": "image/png",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "/icons/icon-144x144.png",
+      "sizes": "144x144",
+      "type": "image/png",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "/icons/icon-152x152.png",
+      "sizes": "152x152",
+      "type": "image/png",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "/icons/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "/icons/icon-384x384.png",
+      "sizes": "384x384",
+      "type": "image/png", 
+      "purpose": "maskable any"
+    },
+    {
+      "src": "/icons/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable any"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Browse Events",
+      "short_name": "Events", 
+      "description": "Discover events happening around you",
+      "url": "/events",
+      "icons": [{ "src": "/icons/events-96x96.png", "sizes": "96x96" }]
+    },
+    {
+      "name": "My Tickets",
+      "short_name": "Tickets",
+      "description": "View your purchased tickets", 
+      "url": "/tickets",
+      "icons": [{ "src": "/icons/tickets-96x96.png", "sizes": "96x96" }]
+    },
+    {
+      "name": "Create Event",
+      "short_name": "Create",
+      "description": "Create a new event",
+      "url": "/admin/events/create", 
+      "icons": [{ "src": "/icons/create-96x96.png", "sizes": "96x96" }]
+    }
+  ],
+  "related_applications": [],
+  "prefer_related_applications": false,
+  "screenshots": [
+    {
+      "src": "/screenshots/homepage-mobile.png",
+      "sizes": "375x812",
+      "type": "image/png",
+      "platform": "mobile",
+      "label": "Homepage on mobile"
+    },
+    {
+      "src": "/screenshots/events-mobile.png", 
+      "sizes": "375x812",
+      "type": "image/png",
+      "platform": "mobile",
+      "label": "Events page on mobile"
+    },
+    {
+      "src": "/screenshots/tickets-mobile.png",
+      "sizes": "375x812", 
+      "type": "image/png",
+      "platform": "mobile",
+      "label": "Digital tickets on mobile"
+    }
+  ]
+}

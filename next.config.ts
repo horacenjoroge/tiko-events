@@ -1,9 +1,20 @@
+// next.config.js - PWA Configuration
 /** @type {import('next').NextConfig} */
 const withPWA = require('next-pwa')({
   dest: 'public',
   register: true,
   skipWaiting: true,
-  disable: process.env.NODE_ENV === 'development'
+  disable: process.env.NODE_ENV === 'development',
+  buildExcludes: [/middleware-manifest\.json$/],
+  manifestPath: '/manifest.json',
+  sw: 'sw.js',
+  fallbacks: {
+    // Failed page requests fallback to this
+    document: '/offline',
+  },
+  cacheStartUrl: true,
+  dynamicStartUrl: false,
+  reloadOnOnline: true,
 });
 
 const nextConfig = {
@@ -18,9 +29,18 @@ const nextConfig = {
     },
   },
   images: {
-    domains: ['localhost', 'via.placeholder.com', 'images.unsplash.com'],
-    formats: ['image/webp', 'image/avif']
+    domains: ['localhost', 'your-domain.com'],
+    formats: ['image/webp', 'image/avif'],
   },
+  headers: async () => [
+    {
+      source: '/manifest.json',
+      headers: [
+        {
+          key: 'Content-Type',
+          value: 'application/manifest+json',
+        },
+      ],
+    },
+  ],
 };
-
-module.exports = withPWA(nextConfig);
