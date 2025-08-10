@@ -1,4 +1,4 @@
-// src/app/page.tsx - Updated with new components
+// src/app/page.tsx - Clean homepage without errors
 import Link from 'next/link'
 import { Header } from '@/components/Header'
 import { BottomNavigation } from '@/components/BottomNavigation'
@@ -189,12 +189,12 @@ export default function HomePage() {
             </Link>
           </div>
           
-          <div className="space-y-6">
+          <div className="grid md:grid-cols-2 gap-6">
             {featuredEvents.map((event) => (
               <EventCard 
                 key={event.id} 
                 event={event} 
-                variant="default"
+                variant="featured"
               />
             ))}
           </div>
