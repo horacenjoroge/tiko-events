@@ -3,7 +3,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Wifi, WifiOff, Database, Settings } from 'lucide-react';
-import { PWAManager } from '@/lib/pwa';
+import { enhancedPWA } from '@/lib/pwa'
 
 export function PWAStatus() {
   const [isOnline, setIsOnline] = useState(true);
@@ -30,7 +30,7 @@ export function PWAStatus() {
 
   const updateCacheSize = async () => {
     try {
-      const pwa = PWAManager.getInstance();
+      const pwa = enhancedPWA;
       const size = await pwa.getCacheSize();
       setCacheSize(size);
     } catch (error) {
@@ -40,7 +40,7 @@ export function PWAStatus() {
 
   const handleClearCache = async () => {
     try {
-      const pwa = PWAManager.getInstance();
+      const pwa = enhancedPWA;
       await pwa.clearCache();
       setCacheSize(0);
       setShowSettings(false);

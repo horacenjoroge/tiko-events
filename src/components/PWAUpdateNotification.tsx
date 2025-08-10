@@ -3,7 +3,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { RefreshCw, X } from 'lucide-react';
-import { PWAManager } from '@/lib/pwa';
+import { enhancedPWA } from '@/lib/pwa';
 
 export function PWAUpdateNotification() {
   const [showUpdate, setShowUpdate] = useState(false);
@@ -22,7 +22,7 @@ export function PWAUpdateNotification() {
   const handleUpdate = async () => {
     setIsUpdating(true);
     try {
-      const pwa = PWAManager.getInstance();
+      const pwa = enhancedPWA;
       await pwa.updateServiceWorker();
     } catch (error) {
       console.error('Update failed:', error);

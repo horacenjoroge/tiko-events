@@ -39,6 +39,211 @@ export class BackgroundSyncManager {
     if (!BackgroundSyncManager.instance) {
       BackgroundSyncManager.instance = new BackgroundSyncManager();
     }
+    return BackgroundSyncManager.instance; // ✅ Fixed: was "return results;"
+  }
+
+  private async initialize() {
+    // Wait for service worker
+    if ('serviceWorker' in navigator) {
+      try {
+        this.swRegistration = await navigator.serviceWorker.ready;
+        console.log('BackgroundSync: Service worker ready');
+        
+        // Listen for sync events from service worker
+        navigator.serviceWorker.addEventListener('message', this.handleServiceWorkerMessage.bind(this));
+        
+        // Load pending operations from storage
+        await this.loadPendingOperations();
+        
+        // Set up online/offline listeners
+        window.addEventListener('online', this.handleOnline.bind(this));
+        window.addEventListener('offline', this.handleOffline.bind(this));
+        
+        // Initial sync if online
+        if (navigator.onLine) {
+          this.scheduleSync();
+        }
+      } catch (error) {
+        console.error('BackgroundSync: Failed to initialize:', error);
+      }
+    }
+  }
+
+  // Load pending operations from IndexedDB
+  private async loadPendingOperations() {
+    try {
+      const failedRequests = await offlineStorage.getFailedRequests();
+      this.syncQueue = failedRequests.map(this.convertFailedRequestToOperation);
+      console.log(`BackgroundSync: Loaded ${this.syncQueue.length} pending operations`);
+    } catch (error) {
+      console.error('BackgroundSync: Failed to load pending operations:', error);
+    }
+  }
+
+  // Convert failed request to sync operation
+  private convertFailedRequestToOperation = (request: FailedRequest): SyncOperation => {
+    return {
+      id: request.id?.toString() || Date.now().toString(),
+      type: this.inferOperationType(request.url),
+      action: this.inferAction(request.method),
+      data: request.body ? JSON.parse(request.body) : null,
+      endpoint: request.url,
+      method: request.method,
+      priority: this.inferPriority(request.url),
+      retryCount: request.retryCount,
+      maxRetries: request.maxRetries,
+      timestamp: request.timestamp
+    };
+  }
+
+  // Infer operation type from URL
+  private inferOperationType(url: string): SyncOperation['type'] {
+    if (url.includes('/orders')) return 'order';
+    if (url.includes('/payments')) return 'payment';
+    if (url.includes('/tickets')) return 'ticket';
+    if (url.includes('/cart')) return 'cart';
+    if (url.includes('/users') || url.includes('/profile')) return 'user-preference';
+    return 'order'; // Default
+  }
+
+  // Infer action from HTTP method
+  private inferAction(method: string): SyncOperation['action'] {
+    switch (method.toUpperCase()) {
+      case 'POST': return 'create';
+      case 'PUT':
+      case 'PATCH': return 'update';
+      case 'DELETE': return 'delete';
+      default: return 'create';
+    }
+  }
+
+  // Infer priority from URL
+  private inferPriority(url: string): SyncOperation['priority'] {
+    if (url.includes('/payments') || url.includes('/orders/create')) return 'high';
+    if (url.includes('/orders') || url.includes('/tickets')) return 'medium';
+    return 'low';
+  }
+
+  // Add operation to sync queue
+  async addOperation(operation: Omit<SyncOperation, 'id' | 'timestamp' | 'retryCount'>): Promise<void> {
+    const syncOperation: SyncOperation = {
+      ...operation,
+      id: `sync-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      timestamp: Date.now(),
+      retryCount: 0
+    };
+
+    this.syncQueue.push(syncOperation);
+    
+    // Store in IndexedDB
+    await this.storePendingOperation(syncOperation);
+    
+    console.log(`BackgroundSync: Added ${operation.type} operation to queue`);
+    
+    // Try immediate sync if online
+    if (navigator.onLine && !this.syncInProgress) {
+      this.scheduleSync();
+    }
+  }
+
+  // Store pending operation in IndexedDB
+  private async storePendingOperation(operation: SyncOperation) {
+    try {
+      const failedRequest: Omit<FailedRequest, 'id'> = {
+        url: operation.endpoint,
+        method: operation.method,
+        headers: [['Content-Type', 'application/json']],
+        body: operation.data ? JSON.stringify(operation.data) : undefined,
+        timestamp: operation.timestamp,
+        retryCount: operation.retryCount,
+        maxRetries: operation.maxRetries
+      };
+      
+      await offlineStorage.addFailedRequest(failedRequest);
+    } catch (error) {
+      console.error('BackgroundSync: Failed to store operation:', error);
+    }
+  }
+
+  // Schedule background sync
+  private scheduleSync(delay = 0) {
+    setTimeout(() => {
+      if (navigator.onLine && !this.syncInProgress) {
+        this.performSync();
+      }
+    }, delay);
+  }
+
+  // Perform actual sync
+  private async performSync(): Promise<SyncResult[]> {
+    if (this.syncInProgress || this.syncQueue.length === 0) {
+      return [];
+    }
+
+    this.syncInProgress = true;
+    const results: SyncResult[] = [];
+    
+    try {
+      console.log(`BackgroundSync: Starting sync of ${this.syncQueue.length} operations`);
+      
+      // Sort by priority and timestamp
+      const sortedQueue = [...this.syncQueue].sort((a, b) => {
+        const priorityOrder = { high: 3, medium: 2, low: 1 };
+        const priorityDiff = priorityOrder[b.priority] - priorityOrder[a.priority];
+        if (priorityDiff !== 0) return priorityDiff;
+        return a.timestamp - b.timestamp;
+      });
+
+      // Process operations
+      for (const operation of sortedQueue) {
+        try {
+          const result = await this.executeOperation(operation);
+          results.push(result);
+          
+          if (result.success) {
+            // Remove from queue and storage
+            this.syncQueue = this.syncQueue.filter(op => op.id !== operation.id);
+            await this.removePendingOperation(operation);
+            
+            // Notify app of successful sync
+            this.notifyApp('SYNC_SUCCESS', { operation, result });
+          } else {
+            // Increment retry count
+            operation.retryCount++;
+            
+            if (operation.retryCount >= operation.maxRetries) {
+              // Max retries reached, remove from queue
+              this.syncQueue = this.syncQueue.filter(op => op.id !== operation.id);
+              await this.removePendingOperation(operation);
+              
+              this.notifyApp('SYNC_FAILED', { operation, error: result.error });
+            } else {
+              // Update retry count in storage
+              await this.updatePendingOperation(operation);
+              
+              // Schedule retry with exponential backoff
+              const delay = this.retryDelays[Math.min(operation.retryCount - 1, this.retryDelays.length - 1)];
+              this.scheduleSync(delay);
+            }
+          }
+        } catch (error) {
+          console.error(`BackgroundSync: Operation ${operation.id} failed:`, error);
+          results.push({
+            success: false,
+            operation,
+            error: error instanceof Error ? error.message : 'Unknown error'
+          });
+        }
+      }
+      
+      console.log(`BackgroundSync: Completed sync. ${results.filter(r => r.success).length}/${results.length} successful`);
+      
+    } catch (error) {
+      console.error('BackgroundSync: Sync process failed:', error);
+    } finally {
+      this.syncInProgress = false;
+    }
+    
     return results;
   }
 
@@ -337,9 +542,7 @@ export class BackgroundSyncManager {
     
     return result;
   }
-}
-
-}
+} // ✅ Fixed: Only one closing brace here
 
 // Export singleton instance
 export const backgroundSync = BackgroundSyncManager.getInstance();
@@ -402,207 +605,3 @@ export const SyncUtils = {
     return queueLength * 2000 + 5000;
   }
 };
-
-  private async initialize() {
-    // Wait for service worker
-    if ('serviceWorker' in navigator) {
-      try {
-        this.swRegistration = await navigator.serviceWorker.ready;
-        console.log('BackgroundSync: Service worker ready');
-        
-        // Listen for sync events from service worker
-        navigator.serviceWorker.addEventListener('message', this.handleServiceWorkerMessage.bind(this));
-        
-        // Load pending operations from storage
-        await this.loadPendingOperations();
-        
-        // Set up online/offline listeners
-        window.addEventListener('online', this.handleOnline.bind(this));
-        window.addEventListener('offline', this.handleOffline.bind(this));
-        
-        // Initial sync if online
-        if (navigator.onLine) {
-          this.scheduleSync();
-        }
-      } catch (error) {
-        console.error('BackgroundSync: Failed to initialize:', error);
-      }
-    }
-  }
-
-  // Load pending operations from IndexedDB
-  private async loadPendingOperations() {
-    try {
-      const failedRequests = await offlineStorage.getFailedRequests();
-      this.syncQueue = failedRequests.map(this.convertFailedRequestToOperation);
-      console.log(`BackgroundSync: Loaded ${this.syncQueue.length} pending operations`);
-    } catch (error) {
-      console.error('BackgroundSync: Failed to load pending operations:', error);
-    }
-  }
-
-  // Convert failed request to sync operation
-  private convertFailedRequestToOperation(request: FailedRequest): SyncOperation {
-    return {
-      id: request.id?.toString() || Date.now().toString(),
-      type: this.inferOperationType(request.url),
-      action: this.inferAction(request.method),
-      data: request.body ? JSON.parse(request.body) : null,
-      endpoint: request.url,
-      method: request.method,
-      priority: this.inferPriority(request.url),
-      retryCount: request.retryCount,
-      maxRetries: request.maxRetries,
-      timestamp: request.timestamp
-    };
-  }
-
-  // Infer operation type from URL
-  private inferOperationType(url: string): SyncOperation['type'] {
-    if (url.includes('/orders')) return 'order';
-    if (url.includes('/payments')) return 'payment';
-    if (url.includes('/tickets')) return 'ticket';
-    if (url.includes('/cart')) return 'cart';
-    if (url.includes('/users') || url.includes('/profile')) return 'user-preference';
-    return 'order'; // Default
-  }
-
-  // Infer action from HTTP method
-  private inferAction(method: string): SyncOperation['action'] {
-    switch (method.toUpperCase()) {
-      case 'POST': return 'create';
-      case 'PUT':
-      case 'PATCH': return 'update';
-      case 'DELETE': return 'delete';
-      default: return 'create';
-    }
-  }
-
-  // Infer priority from URL
-  private inferPriority(url: string): SyncOperation['priority'] {
-    if (url.includes('/payments') || url.includes('/orders/create')) return 'high';
-    if (url.includes('/orders') || url.includes('/tickets')) return 'medium';
-    return 'low';
-  }
-
-  // Add operation to sync queue
-  async addOperation(operation: Omit<SyncOperation, 'id' | 'timestamp' | 'retryCount'>): Promise<void> {
-    const syncOperation: SyncOperation = {
-      ...operation,
-      id: `sync-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-      timestamp: Date.now(),
-      retryCount: 0
-    };
-
-    this.syncQueue.push(syncOperation);
-    
-    // Store in IndexedDB
-    await this.storePendingOperation(syncOperation);
-    
-    console.log(`BackgroundSync: Added ${operation.type} operation to queue`);
-    
-    // Try immediate sync if online
-    if (navigator.onLine && !this.syncInProgress) {
-      this.scheduleSync();
-    }
-  }
-
-  // Store pending operation in IndexedDB
-  private async storePendingOperation(operation: SyncOperation) {
-    try {
-      const failedRequest: Omit<FailedRequest, 'id'> = {
-        url: operation.endpoint,
-        method: operation.method,
-        headers: [['Content-Type', 'application/json']],
-        body: operation.data ? JSON.stringify(operation.data) : undefined,
-        timestamp: operation.timestamp,
-        retryCount: operation.retryCount,
-        maxRetries: operation.maxRetries
-      };
-      
-      await offlineStorage.addFailedRequest(failedRequest);
-    } catch (error) {
-      console.error('BackgroundSync: Failed to store operation:', error);
-    }
-  }
-
-  // Schedule background sync
-  private scheduleSync(delay = 0) {
-    setTimeout(() => {
-      if (navigator.onLine && !this.syncInProgress) {
-        this.performSync();
-      }
-    }, delay);
-  }
-
-  // Perform actual sync
-  private async performSync(): Promise<SyncResult[]> {
-    if (this.syncInProgress || this.syncQueue.length === 0) {
-      return [];
-    }
-
-    this.syncInProgress = true;
-    const results: SyncResult[] = [];
-    
-    try {
-      console.log(`BackgroundSync: Starting sync of ${this.syncQueue.length} operations`);
-      
-      // Sort by priority and timestamp
-      const sortedQueue = [...this.syncQueue].sort((a, b) => {
-        const priorityOrder = { high: 3, medium: 2, low: 1 };
-        const priorityDiff = priorityOrder[b.priority] - priorityOrder[a.priority];
-        if (priorityDiff !== 0) return priorityDiff;
-        return a.timestamp - b.timestamp;
-      });
-
-      // Process operations
-      for (const operation of sortedQueue) {
-        try {
-          const result = await this.executeOperation(operation);
-          results.push(result);
-          
-          if (result.success) {
-            // Remove from queue and storage
-            this.syncQueue = this.syncQueue.filter(op => op.id !== operation.id);
-            await this.removePendingOperation(operation);
-            
-            // Notify app of successful sync
-            this.notifyApp('SYNC_SUCCESS', { operation, result });
-          } else {
-            // Increment retry count
-            operation.retryCount++;
-            
-            if (operation.retryCount >= operation.maxRetries) {
-              // Max retries reached, remove from queue
-              this.syncQueue = this.syncQueue.filter(op => op.id !== operation.id);
-              await this.removePendingOperation(operation);
-              
-              this.notifyApp('SYNC_FAILED', { operation, error: result.error });
-            } else {
-              // Update retry count in storage
-              await this.updatePendingOperation(operation);
-              
-              // Schedule retry with exponential backoff
-              const delay = this.retryDelays[Math.min(operation.retryCount - 1, this.retryDelays.length - 1)];
-              this.scheduleSync(delay);
-            }
-          }
-        } catch (error) {
-          console.error(`BackgroundSync: Operation ${operation.id} failed:`, error);
-          results.push({
-            success: false,
-            operation,
-            error: error instanceof Error ? error.message : 'Unknown error'
-          });
-        }
-      }
-      
-      console.log(`BackgroundSync: Completed sync. ${results.filter(r => r.success).length}/${results.length} successful`);
-      
-    } catch (error) {
-      console.error('BackgroundSync: Sync process failed:', error);
-    } finally {
-      this.syncInProgress = false;
-    }
-    
-    return

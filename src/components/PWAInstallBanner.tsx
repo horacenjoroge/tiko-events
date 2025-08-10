@@ -3,14 +3,14 @@
 
 import React, { useState, useEffect } from 'react';
 import { Download, X, Smartphone } from 'lucide-react';
-import { PWAManager } from '@/lib/pwa';
+import { enhancedPWA } from '@/lib/pwa';
 
 export function PWAInstallBanner() {
   const [showBanner, setShowBanner] = useState(false);
   const [isInstalling, setIsInstalling] = useState(false);
 
   useEffect(() => {
-    const pwa = PWAManager.getInstance();
+    const pwa = enhancedPWA;
     
     // Check if already installed
     if (pwa.isInstalled()) {
